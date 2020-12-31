@@ -81,7 +81,7 @@ class CustomEvaluator:
 import pandas as pd
 from tqdm import tqdm
 song_meta = pd.read_json("./data/song_meta.json")
-train = pd.read_json("./orig/train.json")
+train = pd.read_json("./data/train.json")
 test = pd.read_json("./data/val.json")
 
 train['istrain'] = 1
@@ -143,10 +143,10 @@ plylst_test = plylst_use.iloc[n_train:,:]
 np.random.seed(33)
 n_sample = 300
 
-test = plylst_test.iloc[np.random.choice(range(n_test), n_sample, replace=False),:]
+# test = plylst_test.iloc[np.random.choice(range(n_test), n_sample, replace=False),:]
 
 # real test
-# test = plylst_test
+test = plylst_test
 # print(len(test))
 
 row = np.repeat(range(n_train), plylst_train['num_songs'])
@@ -161,6 +161,17 @@ dat = np.repeat(1, plylst_train['num_tags'].sum())
 train_tags_A = spr.csr_matrix((dat, (row, col)), shape=(n_train, n_tags)) #sparse matrix->CSR(Comporess Spare Row) matrix의 index로 압축하여 저장/ 0이 많은 경우 압축률이 좋다.
 #->palylist와 tag의 co-occurence matrix
 
+test_row = np.repeat(range(n_test), plylst_test['num_songs'])
+test_col = [song for songs in plylst_test['songs_id'] for song in songs]
+test_dat = np.repeat(1, plylst_test['num_songs'].sum())
+test_songs_A = spr.csr_matrix((test_dat, (test_row, test_col)), shape=(n_test, n_songs))
+# -> test playlist와 song의 co-occurence matrix
+
+test_row = np.repeat(range(n_test), plylst_test['num_tags'])
+test_col = [song for songs in plylst_test['tags_id'] for song in songs]
+test_dat = np.repeat(1, plylst_test['num_tags'].sum())
+test_tags_A = spr.csr_matrix((test_dat, (test_row, test_col)), shape=(n_test, n_tags))
+
 train_songs_A_T = train_songs_A.T.tocsr()
 train_tags_A_T = train_tags_A.T.tocsr()
 
@@ -170,9 +181,14 @@ def rec(pids):
     res = []
 
     for pid in pids:
-        p = np.zeros((n_songs, 1))
-###################################################################3
-        p[test.loc[pid, 'songs_id']] = 1 #song_id가 있는 것에 1 부여 / 없으면 0 ->r_ui
+        p1 = test_songs_A[pid-n_train]
+        pt = p1.T
+        p = pt.toarray()
+
+        p2 = test_tags_A[pid - n_train]
+        pt2 = p2.T
+        pp = pt2.toarray()
+
         songs_already = test.loc[pid, "songs_id"]
         tags_already = test.loc[pid, "tags_id"]
 
@@ -188,6 +204,19 @@ def rec(pids):
 
         vals2 = ((vals - np.min(vals)) * (1/m))**2
         simpls2[inds] = vals
+####################################################################################
+        simplst = train_tags_A.dot(pp)
+        simpls2t = np.zeros_like(simplst)
+
+        indst = train_tags_A.dot(pp).reshape(-1).argsort()[-9000:][::-1]  # .reshape(-1) == .reshape(1, -1)처럼 1차원 배열 반환
+        valst = simpls[indst]  # .reshape(-1) == .reshape(1, -1)처럼 1차원 배열 반환
+
+        mt = np.max(valst)
+        if (mt == 0):
+            mt += 0.01
+
+        vals2t = ((valst - np.min(valst)) * (1 / mt)) ** 2
+        simpls2t[indst] = valst
 
         cand_song = train_songs_A_T[:, inds].dot(vals2)
         cand_song_idx = cand_song.reshape(-1).argsort()[-200:][::-1] #내림차순 정렬
@@ -195,7 +224,7 @@ def rec(pids):
         cand_song_idx = cand_song_idx[np.isin(cand_song_idx, songs_already) == False][:100] #playlist에 원래 있던 song이 아닌 것들 100개
         rec_song_idx = [song_sid_id[i] for i in cand_song_idx]
 
-        cand_tag = train_tags_A_T[:, inds].dot(vals2)
+        cand_tag = train_tags_A_T[:, indst].dot(vals2t)
         cand_tag_idx = cand_tag.reshape(-1).argsort()[-15:][::-1]
 
         cand_tag_idx = cand_tag_idx[np.isin(cand_tag_idx, tags_already) == False][:10]
@@ -212,12 +241,10 @@ def rec(pids):
 
         tt += 1
     return res
-print(test.index)
+
 answers = rec(test.index)
 
 write_json(answers, "./results.json")
-
-result = pd.read_json("./results.json")
 
 # evaluator = CustomEvaluator()
 # evaluator.evaluate("./answers/val.json", "./results.json")
