@@ -27,4 +27,5 @@ score = 평균 nDCG(예측한 곡) * 0.85 + 평균 nDCG(예측한 태그) * 0.15
 use user-based learning
 
 참고 논문: [Efficient K-NN for Playlist Continuation](https://eprints.sztaki.hu/9560/1/Kelen_1_30347064_ny.pdf)
-a light-weight playlist-based nearest neighbor method로 간단하지만 강력하고 계산 결과를 빠르게 볼 수 있다는 장점이 있어서 본 논문을 참고했으며, 본 대회의 채점 방식인 nDCG를 위해 solution을 최적화했다는 점에서 이 대회의 문제를 해결하기에 적합한 논문이라고 판단했다.
+
+위 논문을 참고한 이유: a light-weight playlist-based nearest neighbor method로 간단하지만 강력하고 계산 결과를 빠르게 볼 수 있다는 장점이 있어서 본 논문을 참고했으며, 본 대회의 채점 방식인 nDCG를 위해 solution을 최적화했다는 점에서 이 대회의 문제를 해결하기에 적합한 논문이라고 판단했다.
