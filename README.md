@@ -17,4 +17,8 @@
 
 ### Model
 use user-based learning
+
 참고 논문: [Efficient K-NN for Playlist Continuation](https://eprints.sztaki.hu/9560/1/Kelen_1_30347064_ny.pdf)
+
+a light-weight playlist-based nearest neighbor
+method로 간단하지만 강력하고 계산 결과를 빠르게 볼 수 있다는 장점이 있어서 선택했다.
